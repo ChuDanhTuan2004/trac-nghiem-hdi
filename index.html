@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trình Tạo Bài Thi Trắc Nghiệm</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Input Screen -->
+    <div id="inputScreen" class="screen active">
+        <div class="container">
+            <div class="header">
+                <h1>Trình Tạo Bài Thi Trắc Nghiệm</h1>
+                <p>Dán nội dung HTML của bài thi và tạo bài thi trắc nghiệm tương tác</p>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>📤 Nhập Nội Dung Bài Thi</h2>
+                </div>
+                <div class="card-content">
+                    <textarea 
+                        id="inputText" 
+                        placeholder="Dán nội dung HTML của bài thi vào đây..."
+                        rows="15"
+                    ></textarea>
+                    <button id="generateBtn" class="btn btn-primary btn-large" disabled>
+                        Tạo Bài Thi
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Preview Screen -->
+    <div id="previewScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <h1>Bài Thi Đã Sẵn Sàng!</h1>
+                <p id="questionCount">Đã tạo thành công 0 câu hỏi trắc nghiệm</p>
+                
+                <div class="button-group">
+                    <button id="startQuizBtn" class="btn btn-success btn-large">
+                        Bắt Đầu Làm Bài
+                    </button>
+                    <button id="resetBtn1" class="btn btn-outline btn-large">
+                        🔄 Tạo Bài Mới
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Xem Trước Câu Hỏi</h2>
+                </div>
+                <div class="card-content">
+                    <div id="previewQuestions" class="preview-questions"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quiz Screen -->
+    <div id="quizScreen" class="screen">
+        <div class="container">
+            <div class="quiz-header">
+                <div class="question-counter">
+                    <h2 id="questionNumber">Câu 1 / 10</h2>
+                    <div class="badge" id="progressBadge">10%</div>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 id="currentQuestion">Câu hỏi sẽ hiển thị ở đây</h2>
+                </div>
+                <div class="card-content">
+                    <div id="answerOptions" class="answer-options"></div>
+                </div>
+            </div>
+
+            <div class="quiz-navigation">
+                <button id="prevBtn" class="btn btn-outline">Câu Trước</button>
+                <button id="nextBtn" class="btn btn-primary" disabled>Câu Tiếp</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Screen -->
+    <div id="resultsScreen" class="screen">
+        <div class="container">
+            <div class="header">
+                <h1>Kết Quả Bài Thi</h1>
+                <div class="score-display">
+                    <div id="scorePercentage" class="score-percentage">0%</div>
+                    <p id="scoreText">Bạn đã trả lời đúng 0/0 câu hỏi</p>
+                </div>
+
+                <div class="button-group">
+                    <button id="retakeBtn" class="btn btn-primary">Làm Lại</button>
+                    <button id="resetBtn2" class="btn btn-outline">🔄 Tạo Bài Mới</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Chi Tiết Kết Quả</h2>
+                </div>
+                <div class="card-content">
+                    <div id="detailedResults" class="detailed-results"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
