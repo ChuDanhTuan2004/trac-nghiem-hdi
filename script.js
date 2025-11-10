@@ -18,6 +18,8 @@ class QuizGenerator {
       // Input elements
       this.inputText = document.getElementById("inputText")
       this.generateBtn = document.getElementById("generateBtn")
+      this.fileInput = document.getElementById("fileInput")
+      this.fileName = document.getElementById("fileName")
   
       // Preview elements
       this.questionCount = document.getElementById("questionCount")
@@ -49,6 +51,7 @@ class QuizGenerator {
         this.generateBtn.disabled = !this.inputText.value.trim()
       })
   
+      this.fileInput.addEventListener("change", (e) => this.handleFileSelect(e))
       this.generateBtn.addEventListener("click", () => this.generateQuiz())
       this.startQuizBtn.addEventListener("click", () => this.startQuiz())
       this.prevBtn.addEventListener("click", () => this.previousQuestion())
@@ -57,50 +60,93 @@ class QuizGenerator {
       this.resetBtn1.addEventListener("click", () => this.resetApp())
       this.resetBtn2.addEventListener("click", () => this.resetApp())
     }
+
+    handleFileSelect(event) {
+      const file = event.target.files[0]
+      if (!file) return
+
+      if (!file.name.toLowerCase().endsWith('.html') && !file.name.toLowerCase().endsWith('.htm')) {
+        alert('Vui lòng chọn file HTML (.html hoặc .htm)')
+        this.fileInput.value = ''
+        this.fileName.textContent = 'Chưa chọn file'
+        return
+      }
+
+      this.fileName.textContent = file.name
+
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const content = e.target.result
+        this.inputText.value = content
+        this.generateBtn.disabled = !content.trim()
+      }
+      reader.onerror = () => {
+        alert('Lỗi khi đọc file. Vui lòng thử lại.')
+        this.fileInput.value = ''
+        this.fileName.textContent = 'Chưa chọn file'
+      }
+      reader.readAsText(file, 'UTF-8')
+    }
   
     parseQuizContent(text) {
       const parsedQuestions = []
-      const questionBlocks = text.split('<div class="block-quiz-test"')
+      let htmlContent = text.trim()
+      
+      if (htmlContent.startsWith('[') && htmlContent.endsWith(']')) {
+        htmlContent = htmlContent.replace(/^\[|\]$/g, '')
+      }
+  
+      const questionBlocks = htmlContent.split(/<div[^>]*class\s*=\s*["']?block-quiz-test["']?[^>]*>/i)
   
       questionBlocks.forEach((block, index) => {
         if (index === 0) return
   
         try {
-          // Extract question text
-          const questionMatch = block.match(/<span class="quiz-title"><strong>(.*?)<\/strong><\/span>/)
+          const questionMatch = block.match(/<span[^>]*class\s*=\s*["']?quiz-title["']?[^>]*><strong>(.*?)<\/strong><\/span>/i)
           if (!questionMatch) return
   
-          const questionText = questionMatch[1]
-            .replace(/Câu \d+\$\$\d+ Điểm\$\$ : /, "")
-            .replace(/<[^>]*>/g, "")
+          let questionText = questionMatch[1]
+            .replace(/Câu \d+\(\d+ Điểm\)\s*:\s*/, "")
+            .replace(/Câu \d+\$\$\d+ Điểm\$\$\s*:\s*/, "")
             .trim()
+          
+          const tempDiv = document.createElement('div')
+          tempDiv.innerHTML = questionText
+          questionText = tempDiv.textContent || tempDiv.innerText || questionText
+          questionText = questionText.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
   
-          // Extract options
           const options = []
-          const optionRegex = /<div class="w-100 border-left p-1 text-answer">\s*(.*?)\s*<\/div>/g
+          const optionRegex = /<div[^>]*class\s*=\s*["']?w-100 border-left p-1 text-answer["']?[^>]*>\s*(.*?)\s*<\/div>/gs
           let optionMatch
   
           while ((optionMatch = optionRegex.exec(block)) !== null) {
-            const optionText = optionMatch[1]
-              .replace(/<[^>]*>/g, "")
-              .replace(/&[^;]+;/g, " ")
-              .trim()
+            let optionText = optionMatch[1]
+            const tempOptionDiv = document.createElement('div')
+            tempOptionDiv.innerHTML = optionText
+            optionText = tempOptionDiv.textContent || tempOptionDiv.innerText || optionText
+            optionText = optionText.replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim()
             if (optionText) {
               options.push(optionText)
             }
           }
   
-          // Find correct answer
           let correctAnswer = 0
-          const correctAnswerMatch = block.match(
-            /class="text-success area-answer-quiz.*?<span class="m-auto"[^>]*>([A-E])<\/span>/,
-          )
+          const correctAnswerRegex = /<label[^>]*class\s*=\s*["']?[^"'>]*text-success[^"'>]*area-answer-quiz[^"'>]*["']?[^>]*>[\s\S]*?<span[^>]*class\s*=\s*["']?[^"'>]*m-auto[^"'>]*["']?[^>]*>([A-E])<\/span>/i
+          const correctAnswerMatch = block.match(correctAnswerRegex)
+          
           if (correctAnswerMatch) {
             const correctLetter = correctAnswerMatch[1]
             correctAnswer = correctLetter.charCodeAt(0) - "A".charCodeAt(0)
+          } else {
+            const checkedInputRegex = /<input[^>]*checked[^>]*>[\s\S]*?<span[^>]*class\s*=\s*["']?[^"'>]*m-auto[^"'>]*["']?[^>]*>([A-E])<\/span>/i
+            const checkedMatch = block.match(checkedInputRegex)
+            if (checkedMatch) {
+              const correctLetter = checkedMatch[1]
+              correctAnswer = correctLetter.charCodeAt(0) - "A".charCodeAt(0)
+            }
           }
   
-          if (questionText && options.length > 0) {
+          if (questionText && options.length > 0 && correctAnswer >= 0 && correctAnswer < options.length) {
             parsedQuestions.push({
               id: parsedQuestions.length + 1,
               question: questionText,
@@ -190,21 +236,67 @@ class QuizGenerator {
   
       // Render answer options
       this.answerOptions.innerHTML = ""
+      const userAnswer = this.userAnswers[this.currentQuestionIndex]
+      const hasAnswered = userAnswer !== undefined
+      
       question.options.forEach((option, index) => {
         const optionDiv = document.createElement("button")
         optionDiv.className = "answer-option"
-        if (this.userAnswers[this.currentQuestionIndex] === index) {
+        
+        const isCorrect = index === question.correctAnswer
+        const isUserAnswer = userAnswer === index
+        const isWrong = hasAnswered && isUserAnswer && !isCorrect
+        
+        if (isUserAnswer) {
           optionDiv.classList.add("selected")
+        }
+        
+        if (hasAnswered) {
+          if (isCorrect) {
+            optionDiv.classList.add("correct-answer")
+          }
+          if (isWrong) {
+            optionDiv.classList.add("wrong-answer")
+          }
+          optionDiv.disabled = true
+        }
+  
+        let iconHtml = ""
+        if (hasAnswered) {
+          if (isCorrect) {
+            iconHtml = '<div class="answer-icon correct-icon">✓</div>'
+          } else if (isWrong) {
+            iconHtml = '<div class="answer-icon wrong-icon">✗</div>'
+          }
         }
   
         optionDiv.innerHTML = `
                   <div class="answer-letter">${String.fromCharCode(65 + index)}</div>
                   <div class="answer-text">${option}</div>
+                  ${iconHtml}
               `
   
-        optionDiv.addEventListener("click", () => this.selectAnswer(index))
+        if (!hasAnswered) {
+          optionDiv.addEventListener("click", () => this.selectAnswer(index))
+        }
+        
         this.answerOptions.appendChild(optionDiv)
       })
+      
+      if (hasAnswered) {
+        const isCorrect = userAnswer === question.correctAnswer
+        const feedbackDiv = document.createElement("div")
+        feedbackDiv.className = `answer-feedback ${isCorrect ? "correct" : "incorrect"}`
+        feedbackDiv.innerHTML = `
+          <div class="feedback-icon">${isCorrect ? "✓" : "✗"}</div>
+          <div class="feedback-text">
+            ${isCorrect 
+              ? "Chúc mừng! Bạn đã trả lời đúng." 
+              : `Đáp án đúng là: <strong>${String.fromCharCode(65 + question.correctAnswer)}</strong>`}
+          </div>
+        `
+        this.answerOptions.appendChild(feedbackDiv)
+      }
     }
   
     selectAnswer(answerIndex) {
@@ -306,6 +398,8 @@ class QuizGenerator {
       this.userAnswers = []
       this.currentQuestionIndex = 0
       this.inputText.value = ""
+      this.fileInput.value = ""
+      this.fileName.textContent = "Chưa chọn file"
       this.generateBtn.disabled = true
       this.showScreen("inputScreen")
     }
